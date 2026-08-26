@@ -1,6 +1,7 @@
 # AetherClean Settings
 general:
   target_drive: "C:"
+  language: "en" # "en" or "ru"
   quarantine_dir: "C:\\AetherClean_Quarantine"
   default_action: "recycle_bin" # options: "recycle_bin", "quarantine", "permanent_delete"
   create_restore_point: true

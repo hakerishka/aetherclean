@@ -1,18 +1,17 @@
 """
-Detailed Inspector Pane for selected ScanItem.
-Shows risk explanation, safety recommendation, why the item was flagged, and a file list preview.
+Detailed Inspector Pane for selected ScanItem with i18n support.
 """
 
 import os
 import subprocess
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
-    QTableWidget, QTableWidgetItem, QHeaderView, QPushButton,
-    QScrollArea
+    QTableWidget, QTableWidgetItem, QHeaderView, QPushButton
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtGui import QFont
 from core.models import ScanItem, RiskLevel, format_bytes
+from core.i18n import t
 
 
 class ItemDetailView(QFrame):
@@ -31,7 +30,7 @@ class ItemDetailView(QFrame):
         layout.setSpacing(12)
 
         # Title & Category
-        self.title_label = QLabel("Выберите элемент для анализа")
+        self.title_label = QLabel(t("detail_empty_title"))
         self.title_label.setObjectName("headerTitle")
         self.title_label.setWordWrap(True)
         layout.addWidget(self.title_label)
@@ -49,10 +48,10 @@ class ItemDetailView(QFrame):
         banner_layout = QVBoxLayout(self.safety_banner)
         banner_layout.setContentsMargins(8, 4, 8, 4)
 
-        self.risk_badge_label = QLabel("Уровень риска: --")
+        self.risk_badge_label = QLabel(f"{t('tree_col_risk')}: --")
         self.risk_badge_label.setFont(QFont("Segoe UI", 10, QFont.Bold))
 
-        self.safety_advice_label = QLabel("Здесь отображаются рекомендации по безопасности.")
+        self.safety_advice_label = QLabel(t("detail_empty_desc"))
         self.safety_advice_label.setWordWrap(True)
         self.safety_advice_label.setStyleSheet("color: #E0E0E0; font-size: 12px;")
 
@@ -73,10 +72,10 @@ class ItemDetailView(QFrame):
 
         # Stats and Action Buttons Row
         stats_row = QHBoxLayout()
-        self.size_label = QLabel("Размер: --")
+        self.size_label = QLabel(t("table_col_size") + ": --")
         self.size_label.setFont(QFont("Segoe UI", 10, QFont.Bold))
 
-        self.open_explorer_btn = QPushButton("📁 Открыть в Проводнике")
+        self.open_explorer_btn = QPushButton(t("detail_btn_explorer"))
         self.open_explorer_btn.setObjectName("secondaryButton")
         self.open_explorer_btn.clicked.connect(self._open_in_explorer)
         self.open_explorer_btn.setEnabled(False)
@@ -87,14 +86,18 @@ class ItemDetailView(QFrame):
         layout.addLayout(stats_row)
 
         # Files Preview Table
-        files_title = QLabel("Список обнаруженных файлов:")
+        files_title = QLabel(t("detail_files_title"))
         files_title.setFont(QFont("Segoe UI", 9, QFont.Bold))
         files_title.setStyleSheet("color: #AAAAAA;")
         layout.addWidget(files_title)
 
         self.files_table = QTableWidget()
         self.files_table.setColumnCount(3)
-        self.files_table.setHorizontalHeaderLabels(["Путь к файлу", "Размер", "Дата изменения"])
+        self.files_table.setHorizontalHeaderLabels([
+            t("table_col_path"),
+            t("table_col_size"),
+            t("table_col_mtime")
+        ])
         self.files_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         self.files_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
         self.files_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
@@ -106,8 +109,8 @@ class ItemDetailView(QFrame):
         self._current_item = item
         self.title_label.setText(f"{item.category.icon_name} {item.title}")
         self.desc_label.setText(item.description)
-        self.reason_label.setText(f"💡 Почему это здесь: {item.reason}")
-        self.size_label.setText(f"Общий объем: {item.format_size()} ({item.file_count} файлов)")
+        self.reason_label.setText(f"{t('detail_why_label')} {item.reason}")
+        self.size_label.setText(t("detail_total_label", size=item.format_size(), count=item.file_count))
 
         # Update Safety Banner
         if item.risk_level == RiskLevel.SAFE:
@@ -139,7 +142,6 @@ class ItemDetailView(QFrame):
         self.files_table.setRowCount(0)
         display_files = item.files if item.files else []
 
-        # If no files list but paths exist, construct file entries
         if not display_files and item.paths:
             for p in item.paths:
                 row = self.files_table.rowCount()

@@ -1,100 +1,106 @@
-# 📖 AetherClean — Полная техническая документация
+# 📖 AetherClean — Technical Architecture & Deep-Dive Reference
 
-## 1. Архитектура и принципы работы
+## 1. Overview & Core Philosophy
 
-AetherClean спроектирован как интеллектуальная альтернатива классическим «слепым» утилитам очистки (CCleaner, BleachBit). Программа не просто удаляет файлы по статическому списку путей, а строит динамическую цифровую модель системы, сопоставляя состояние файловой системы с реестром Windows, базами установленных пакетов и метаданными активности файлов.
+**AetherClean** is engineered as a modern, safe, and intelligent alternative to classical "blind" cleanup utilities (CCleaner, BleachBit). Rather than executing static deletions against hardcoded paths, AetherClean builds a dynamic model of your system by cross-referencing live filesystem structures against the Windows Registry, Windows Store package repositories, and file activity heuristics.
 
 ```mermaid
 graph TD
-    subgraph "Слой анализаторов (Scanners)"
-        A[OrphanedAppDataScanner] -->|Поиск забытых папок| ORCH[MasterScanner Orchestrator]
-        B[InstallerCacheScanner] -->|Сверка MSI/MSP с реестром| ORCH
-        C[DriverStoreScanner] -->|Анализ распакованных пакетов| ORCH
-        D[SystemJunkScanner] -->|Дампы WER, Temp, DeliveryOpt| ORCH
-        E[AppCacheScanner] -->|YAML база правил| ORCH
-        F[LargeDormantScanner] -->|Поиск спящих файлов >500МБ| ORCH
-        G[DismAnalyzer] -->|Аудит WinSxS / DISM| ORCH
+    subgraph "Discovery Layer (Scanners)"
+        A[OrphanedAppDataScanner] -->|Dead AppData Trees| ORCH[MasterScanner Orchestrator]
+        B[InstallerCacheScanner] -->|MSI/MSP Registry Verification| ORCH
+        C[DriverStoreScanner] -->|Unpacked Driver Packages| ORCH
+        D[RegistryJunkScanner] -->|Dead Startup & App Paths| ORCH
+        E[SystemJunkScanner] -->|WER Dumps, Temp, DeliveryOpt| ORCH
+        F[AppCacheScanner] -->|Declarative YAML Rules| ORCH
+        G[LargeDormantScanner] -->|Files >500MB untouched for 90d+| ORCH
+        H[DismAnalyzer] -->|WinSxS Component Store Audit| ORCH
     end
 
-    subgraph "База знаний и реестр"
+    subgraph "Ground Truth & Rules"
         REG[RegistryAnalyzer] --> A
         REG --> B
-        RULES[YAML RuleEngine] --> D
-        RULES --> E
+        REG --> D
+        RULES[YAML RuleEngine] --> E
+        RULES --> F
         RULES --> C
     end
 
-    subgraph "Безопасность и исполнение"
+    subgraph "Safety & Execution Layer"
         ORCH --> EVAL[Risk & Safety Evaluator]
         EVAL --> UI[PySide6 Fluent UI]
-        UI -->|Команда очистки| WORKER[CleanWorker Thread]
-        WORKER --> RP[Windows Restore Point]
+        UI -->|Clean Command| WORKER[CleanWorker Background Thread]
+        WORKER --> RP[Windows Restore Point API]
         WORKER --> QM[QuarantineManager]
         QM -->|Mode 1| RB[Windows Recycle Bin]
-        QM -->|Mode 2| QUAR[Structured Quarantine Store]
+        QM -->|Mode 2| QUAR[Structured Quarantine Snapshot]
         QM -->|Mode 3| PERM[Permanent Delete]
     end
 ```
 
 ---
 
-## 2. Модули анализа и алгоритмы
+## 2. Specialized Scanners & Algorithms
 
-### 2.1. Анализатор реестра и установленного ПО (`core/registry_analyzer.py`)
-- **Источники данных**:
-  1. `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall` (64-бит `KEY_WOW64_64KEY`)
-  2. `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall` (32-бит `KEY_WOW64_32KEY`)
+### 2.1. Registry Ground-Truth Analyzer (`core/registry_analyzer.py`)
+- **Data Sources**:
+  1. `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall` (64-bit `KEY_WOW64_64KEY`)
+  2. `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall` (32-bit `KEY_WOW64_32KEY`)
   3. `HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall`
   4. UWP / AppX Packages: `HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages`
-  5. Windows Installer Database: `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData\S-1-5-18\Products` и `Patches`.
-- **Токенизация и индексирование**:
-  - Названия приложений (Display Name) и разработчиков (Publisher) очищаются от спецсимволов и разбиваются на поисковые токены.
-  - Строится N-граммный и токенный индекс, позволяющий распознавать папки вида `Adobe\Premiere Pro 2024`, `Telegram Desktop`, `EpicGamesLauncher`.
-- **Система белых списков**:
-  - Встроенный жесткий список критических вендоров и системных компонентов (`Microsoft`, `Windows`, `Intel`, `NVIDIA`, `AMD`, `Realtek`, `Windows Defender` и др.), гарантирующий защиту от ложноположительных срабатываний.
+  5. Windows Installer Database: `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData\S-1-5-18\Products` and `Patches`.
+- **Tokenization & Search Index**:
+  - Application display names and publishers are tokenized and indexed into N-gram token sets.
+  - This allows fuzzy matching of complex directory trees (e.g. `Adobe\Premiere Pro 2024`, `Telegram Desktop`, `EpicGamesLauncher`).
+- **Hard Whitelist**:
+  - Critical system vendors and services (`Microsoft`, `Windows`, `Intel`, `NVIDIA`, `AMD`, `Realtek`, `Windows Defender`, etc.) are protected against false positives.
 
-### 2.2. Поиск папок-сирот (`scanners/orphaned_appdata_scanner.py`)
-- Обходит директории:
-  - `%LOCALAPPDATA%` (`C:\Users\<User>\AppData\Local`)
-  - `%APPDATA%` (`C:\Users\<User>\AppData\Roaming`)
-  - `%PROGRAMDATA%` (`C:\ProgramData`)
-- Для каждой вложенной папки проверяет:
-  1. Наличие в белом списке.
-  2. Соответствие токенам установленных в реестре программ.
-  3. Время последней модификации (`mtime`) файлов внутри папки.
-  4. Если программа удалена, а файлы не изменялись более N дней (настраивается в `settings.yaml`, по умолчанию 30 дней) — папка маркируется как `ORPHANED_APPDATA` с уровнем риска `MEDIUM`.
+### 2.2. Orphaned AppData Scanner (`scanners/orphaned_appdata_scanner.py`)
+- Traverses `%LOCALAPPDATA%`, `%APPDATA%`, and `%PROGRAMDATA%`.
+- For each directory:
+  1. Checks whitelist exclusion.
+  2. Matches against active registered software.
+  3. Inspects file modification times (`mtime`).
+  4. If an application was uninstalled and its folder has remained untouched for >30–90 days, it is flagged as `ORPHANED_APPDATA` with risk rating `MEDIUM`.
 
-### 2.3. Валидатор кэша установщиков (`scanners/installer_scanner.py`)
-- Каталог `C:\Windows\Installer` содержит копии `.msi` и `.msp` пакетов, необходимых для изменения или удаления установленных программ.
-- Со временем при обновлениях программ старые версии пакетов часто теряют привязку к реестру, превращаясь в «мертвый груз» весом 10–50 ГБ.
-- **Алгоритм**:
-  - Считывает точный перечень активных значений `LocalPackage` из реестра Windows Installer.
-  - Файлы `.msi` / `.msp` на диске, не входящие в белый список реестра, определяются как осиротевшие.
-  - Рекомендуемое действие — помещение в **Карантин**.
+### 2.3. Windows Installer Cache Validator (`scanners/installer_scanner.py`)
+- The `C:\Windows\Installer` directory stores cached `.msi` and `.msp` installation and patch packages.
+- Over time, accumulated updates leave unreferenced patches orphaned on disk, consuming 10–50 GB.
+- **Algorithm**:
+  - Enumerates all active `LocalPackage` values from Windows Installer registry branches.
+  - Compares every `.msi` and `.msp` file in `C:\Windows\Installer` against this registered set.
+  - Unregistered files are safely flagged for quarantine.
 
-### 2.4. Поиск тяжелых спящих файлов (`scanners/large_dormant_scanner.py`)
-- Сканирует пользовательские каталоги `Downloads`, `Videos`, `Documents`, `Desktop`.
-- Фильтрует файлы по порогу размера (например, $\ge 500$ МБ) и дате последнего изменения/обращения ($\ge 90$ дней).
-- Особое внимание уделяется расширениям: `.iso`, `.img`, `.vmdk`, `.vhdx`, `.zip`, `.rar`, `.7z`, `.exe`, `.msi`.
-- Всегда маркируется как `HIGH` риск и **никогда не выбирается по умолчанию**, защищая ценные файлы пользователя.
+### 2.4. Windows Registry Debris Scanner (`scanners/registry_junk_scanner.py`)
+- **Path Validation**:
+  - Extracts binary and `.dll` paths from `HKCU\...\Run`, `HKLM\...\Run`, `RunOnce`, and `App Paths`.
+  - Verifies physical presence on disk. Dead references pointing to non-existent binaries are flagged as `SAFE` to clean.
+- **Orphaned Software Keys**:
+  - Analyzes `HKCU\Software\<Vendor>` keys for deleted software with zero matching filesystem traces.
+
+### 2.5. Large Dormant Files Finder (`scanners/large_dormant_scanner.py`)
+- Audits user directories (`Downloads`, `Videos`, `Documents`, `Desktop`).
+- Identifies large files ($\ge 500$ MB) untouched for $\ge 90$ days.
+- Prioritizes extensions: `.iso`, `.img`, `.vmdk`, `.vhdx`, `.zip`, `.rar`, `.7z`, `.exe`, `.msi`.
+- Always classified as `HIGH RISK` and **never auto-selected**, ensuring the user retains explicit control.
 
 ---
 
-## 3. Модель безопасности и подсистема Карантина
+## 3. Safety Model & 1-Click Quarantine Subsystem
 
-### 3.1. Зачем нужен Карантин?
-Обычная Корзина Windows (`$Recycle.Bin`):
-- Имеет общий лимит размера (при переполнении старые файлы удаляются без предупреждения).
-- Сваливает все файлы в общую кучу без фиксации сессий и связанных групп.
-- Ручной возврат сотен мелких файлов из разных подкаталогов `AppData` крайне трудоемок.
+### 3.1. Why Quarantine?
+Standard Windows Recycle Bin (`$Recycle.Bin`):
+- Loses relative directory structures when restoring complex deeply nested folders.
+- Automatically purges old files when storage quota is reached.
+- Lacks session tracking.
 
-**Карантин AetherClean**:
-- Создает изолированную сессию `C:\AetherClean_Quarantine\session_YYYYMMDD_HHMMSS\`.
-- Формирует структурированный файл `manifest.json`:
+**AetherClean Quarantine Snapshot**:
+- Creates an isolated session folder: `C:\AetherClean_Quarantine\session_YYYYMMDD_HHMMSS\`.
+- Writes a structured `manifest.json`:
   ```json
   {
     "session_id": "session_20260826_001530",
-    "timestamp": "2026-08-26T00:15:30",
+    "timestamp": "2026-08-26T17:15:30",
     "total_bytes": 1548291040,
     "is_restored": false,
     "records": [
@@ -108,61 +114,58 @@ graph TD
     ]
   }
   ```
-- **Откат в 1 клик**: при нажатии кнопки «Восстановить» в окне Карантина менеджер автоматически восстанавливает всю структуру каталогов и возвращает файлы на их исходные места.
+- **1-Click Rollback**: Clicking "Restore" reconstructs the exact original directory tree and moves files back seamlessly.
 
-### 3.2. Точки восстановления Windows (`core/restore_point.py`)
-Перед очисткой глубоких системных компонентов или папок с риском `MEDIUM`/`HIGH` программа может автоматически инициировать создание системной контрольной точки Windows System Restore (`Checkpoint-Computer`).
+### 3.2. Windows System Restore Integration (`core/restore_point.py`)
+Automatically invokes PowerShell `Checkpoint-Computer` before deep cleaning operations if enabled in settings.
 
 ---
 
-## 4. Декларативная система правил (YAML Rules)
+## 4. Declarative YAML Rules
 
-Правила описываются в формате YAML в каталоге `config/rules/`.
+Rules are located in `config/rules/*.yaml`.
 
-### Формат правила:
 ```yaml
 - id: "unique_rule_id"
-  name: "Понятное название правила"
+  name: "Human Readable Rule Name"
   category: "app_cache" # app_cache | system_junk | drivers | installer_cache
   risk_level: "safe"    # safe | medium | high
-  safety_label: "Безопасно: краткая подсказка пользователю"
-  description: "Подробное описание, что это за файлы и зачем они нужны."
+  safety_label: "Safe: brief advice to the user"
+  description: "Detailed description of what these files are."
   paths:
     - "%LOCALAPPDATA%\\Vendor\\App\\Cache"
     - "%APPDATA%\\Vendor\\App\\GPUCache"
     - "%TEMP%\\AppTemp_*"
   options:
-    delete_contents_only: true # Очищать содержимое, не удаляя саму корневую папку
-    min_age_hours: 12          # Игнорировать файлы новее указанного числа часов
+    delete_contents_only: true # Delete contents without deleting the root folder
+    min_age_hours: 12          # Ignore files newer than N hours
 ```
-
-Поддерживаемые переменные окружения: `%LOCALAPPDATA%`, `%APPDATA%`, `%PROGRAMDATA%`, `%TEMP%`, `%WINDIR%`, `%SystemDrive%`, `%USERPROFILE%`.
 
 ---
 
-## 5. Использование через Python API
+## 5. Python API Usage
 
-Вы можете использовать ядро AetherClean программно в своих скриптах:
+AetherClean's core engine can be integrated programmatically into scripts or CI pipelines:
 
 ```python
 from core.scanner import MasterScanner
 from core.quarantine_manager import QuarantineManager
 from core.models import CleanAction, format_bytes
 
-# 1. Сканирование диска C:
+# 1. Initialize and run a full scan on drive C:
 scanner = MasterScanner()
 results = scanner.run_full_scan(target_drive="C:")
 
-print(f"Всего найдено: {format_bytes(results.total_bytes)}")
+print(f"Total recoverable: {format_bytes(results.total_bytes)}")
 for item in results.items:
     print(f"[{item.risk_level.value.upper()}] {item.title}: {item.format_size()}")
 
-# 2. Очистка только безопасных элементов в Карантин
+# 2. Safely clean items to quarantine
 safe_items = [i for i in results.items if i.risk_level.value == "safe"]
 qm = QuarantineManager()
 freed_bytes, count, errors = qm.execute_cleaning(
     items_to_clean=safe_items,
     action=CleanAction.QUARANTINE
 )
-print(f"Освобождено в карантин: {format_bytes(freed_bytes)}")
+print(f"Quarantined {count} items, freed {format_bytes(freed_bytes)}.")
 ```

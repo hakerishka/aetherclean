@@ -1,12 +1,13 @@
 """
-Category and Item Tree widget with tri-state checkboxes and risk badges.
+Category and Item Tree widget with tri-state checkboxes, risk badges, and i18n support.
 """
 
-from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem, QHeaderView, QWidget, QHBoxLayout, QLabel
+from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem, QHeaderView
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor, QBrush, QFont
 from typing import Dict, List, Optional
 from core.models import ScanItem, CategoryGroup, Category, RiskLevel, format_bytes
+from core.i18n import t
 
 
 class CategoryTreeWidget(QTreeWidget):
@@ -24,7 +25,12 @@ class CategoryTreeWidget(QTreeWidget):
 
     def _init_tree(self):
         self.setColumnCount(4)
-        self.setHeaderLabels(["Категория / Элемент", "Риск", "Размер", "Файлов"])
+        self.setHeaderLabels([
+            t("tree_col_category"),
+            t("tree_col_risk"),
+            t("tree_col_size"),
+            t("tree_col_files")
+        ])
 
         header = self.header()
         header.setSectionResizeMode(0, QHeaderView.Stretch)
@@ -43,6 +49,14 @@ class CategoryTreeWidget(QTreeWidget):
         self.clear()
         self._items_map.clear()
         self._category_nodes.clear()
+
+        # Update header labels in case language changed
+        self.setHeaderLabels([
+            t("tree_col_category"),
+            t("tree_col_risk"),
+            t("tree_col_size"),
+            t("tree_col_files")
+        ])
 
         for category, group in category_groups.items():
             if not group.items:
@@ -99,14 +113,12 @@ class CategoryTreeWidget(QTreeWidget):
         if self._block_signals or column != 0:
             return
 
-        # If it's a child node (ScanItem)
         if tree_item in self._items_map:
             scan_item = self._items_map[tree_item]
             scan_item.is_selected = (tree_item.checkState(0) == Qt.Checked)
             self._update_parent_category(tree_item.parent())
             self.selection_changed_signal.emit()
 
-        # If it's a category node
         elif tree_item.childCount() > 0:
             state = tree_item.checkState(0)
             if state != Qt.PartiallyChecked:
@@ -143,7 +155,6 @@ class CategoryTreeWidget(QTreeWidget):
             self.item_focused_signal.emit(self._items_map[current])
 
     def select_all_safe(self):
-        """Checks all SAFE items and unchecks MEDIUM/HIGH risk items."""
         self._block_signals = True
         for node, item in self._items_map.items():
             if item.risk_level == RiskLevel.SAFE:

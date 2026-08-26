@@ -1,14 +1,15 @@
 """
-Quarantine and Rollback management dialog for AetherClean.
+Quarantine and Rollback management dialog for AetherClean with i18n support.
 """
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox, QFrame
+    QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox
 )
 from PySide6.QtCore import Qt
 from core.quarantine_manager import QuarantineManager
 from core.models import format_bytes
+from core.i18n import t
 
 
 class QuarantineDialog(QDialog):
@@ -17,7 +18,7 @@ class QuarantineDialog(QDialog):
     def __init__(self, quarantine_manager: QuarantineManager, parent=None):
         super().__init__(parent)
         self.qm = quarantine_manager
-        self.setWindowTitle("Карантин и восстановление файлов")
+        self.setWindowTitle(t("quar_dlg_title"))
         self.resize(750, 480)
         self._init_ui()
         self._load_sessions()
@@ -28,14 +29,11 @@ class QuarantineDialog(QDialog):
         layout.setSpacing(14)
 
         # Header
-        title = QLabel("📦 Управление Карантином")
+        title = QLabel(t("quar_dlg_header"))
         title.setObjectName("headerTitle")
         layout.addWidget(title)
 
-        desc = QLabel(
-            "Здесь хранятся резервные копии файлов, перемещенных в Карантин при очистке. "
-            "Вы можете в любой момент восстановить их на исходные места в один клик."
-        )
+        desc = QLabel(t("quar_dlg_desc"))
         desc.setWordWrap(True)
         desc.setStyleSheet("color: #AAAAAA; font-size: 12px;")
         layout.addWidget(desc)
@@ -43,7 +41,13 @@ class QuarantineDialog(QDialog):
         # Sessions Table
         self.table = QTableWidget()
         self.table.setColumnCount(5)
-        self.table.setHorizontalHeaderLabels(["ID Сессии", "Дата и время", "Объем", "Файлов", "Статус"])
+        self.table.setHorizontalHeaderLabels([
+            t("quar_col_id"),
+            t("quar_col_date"),
+            t("quar_col_size"),
+            t("quar_col_items"),
+            t("quar_col_status")
+        ])
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
@@ -55,15 +59,15 @@ class QuarantineDialog(QDialog):
         # Action Buttons
         btn_layout = QHBoxLayout()
 
-        self.restore_btn = QPushButton("↩️ Восстановить выбранную сессию")
+        self.restore_btn = QPushButton(t("quar_btn_restore"))
         self.restore_btn.setObjectName("primaryButton")
         self.restore_btn.clicked.connect(self._restore_selected)
 
-        self.delete_btn = QPushButton("🗑️ Удалить навсегда")
+        self.delete_btn = QPushButton(t("quar_btn_delete"))
         self.delete_btn.setObjectName("dangerButton")
         self.delete_btn.clicked.connect(self._delete_selected)
 
-        self.close_btn = QPushButton("Закрыть")
+        self.close_btn = QPushButton(t("clean_dlg_btn_close"))
         self.close_btn.setObjectName("secondaryButton")
         self.close_btn.clicked.connect(self.accept)
 
@@ -95,7 +99,8 @@ class QuarantineDialog(QDialog):
             self.table.setItem(row, 2, QTableWidgetItem(format_bytes(s.total_bytes)))
             self.table.setItem(row, 3, QTableWidgetItem(str(s.item_count)))
 
-            status_item = QTableWidgetItem("Восстановлено" if s.is_restored else "В карантине")
+            status_text = t("quar_status_restored") if s.is_restored else t("quar_status_in_quar")
+            status_item = QTableWidgetItem(status_text)
             status_item.setForeground(Qt.green if s.is_restored else Qt.yellow)
             self.table.setItem(row, 4, status_item)
 
@@ -115,8 +120,8 @@ class QuarantineDialog(QDialog):
 
         reply = QMessageBox.question(
             self,
-            "Подтверждение отката",
-            f"Восстановить все файлы из сессии '{session_id}' в исходные системные каталоги?",
+            "Confirm Undo / Восстановление",
+            f"Restore all files from session '{session_id}' to their original locations?",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.Yes
         )
@@ -126,14 +131,14 @@ class QuarantineDialog(QDialog):
             if errors:
                 QMessageBox.warning(
                     self,
-                    "Восстановление с предупреждениями",
-                    f"Восстановлено объектов: {count}.\nОшибки:\n" + "\n".join(errors[:5])
+                    "Warnings during restore",
+                    f"Restored objects: {count}.\nErrors:\n" + "\n".join(errors[:5])
                 )
             else:
                 QMessageBox.information(
                     self,
-                    "Успешный откат",
-                    f"Все объекты ({count} шт.) успешно восстановлены на свои исходные места!"
+                    "Restore Successful",
+                    f"All objects ({count}) successfully restored to original paths!"
                 )
             self._load_sessions()
 
@@ -144,15 +149,15 @@ class QuarantineDialog(QDialog):
 
         reply = QMessageBox.warning(
             self,
-            "Удаление сессии",
-            f"Вы уверены, что хотите навсегда удалить резервные копии сессии '{session_id}'?\nЭто действие нельзя отменить.",
+            "Delete Quarantine Session",
+            f"Are you sure you want to permanently delete session '{session_id}'?\nThis action cannot be undone.",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No
         )
 
         if reply == QMessageBox.Yes:
             if self.qm.delete_session(session_id):
-                QMessageBox.information(self, "Удалено", "Сессия карантина удалена.")
+                QMessageBox.information(self, "Deleted", "Quarantine session deleted.")
                 self._load_sessions()
             else:
-                QMessageBox.critical(self, "Ошибка", "Не удалось удалить каталог сессии.")
+                QMessageBox.critical(self, "Error", "Could not delete session directory.")

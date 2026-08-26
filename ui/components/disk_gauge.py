@@ -1,11 +1,12 @@
 """
-Disk space visualization widget for AetherClean.
+Disk space visualization widget for AetherClean with i18n support.
 """
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QProgressBar
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPainter, QColor, QBrush, QPen
+from PySide6.QtGui import QPainter, QColor, QBrush
 from core.models import format_bytes
+from core.i18n import t
 
 
 class DiskGaugeWidget(QFrame):
@@ -30,10 +31,10 @@ class DiskGaugeWidget(QFrame):
 
         # Header row
         header_layout = QHBoxLayout()
-        self.drive_label = QLabel("💾 Системный диск (C:)")
+        self.drive_label = QLabel(t("system_drive_title"))
         self.drive_label.setObjectName("sectionTitle")
 
-        self.stats_label = QLabel("Свободно: -- / Всего: --")
+        self.stats_label = QLabel(t("free_total_fmt", free="--", total="--"))
         self.stats_label.setStyleSheet("color: #AAAAAA; font-size: 12px;")
 
         header_layout.addWidget(self.drive_label)
@@ -48,13 +49,13 @@ class DiskGaugeWidget(QFrame):
         # Bottom info row
         info_layout = QHBoxLayout()
 
-        self.legend_used = QLabel("■ Занято: 0 GB")
+        self.legend_used = QLabel(t("legend_used", size="0 GB"))
         self.legend_used.setStyleSheet("color: #78909C; font-size: 12px; font-weight: 500;")
 
-        self.legend_cleanable = QLabel("■ Выбрано к очистке: 0 GB")
+        self.legend_cleanable = QLabel(t("legend_cleanable", size="0 GB"))
         self.legend_cleanable.setStyleSheet("color: #4CAF50; font-size: 12px; font-weight: 600;")
 
-        self.legend_free = QLabel("■ Свободно: 0 GB")
+        self.legend_free = QLabel(t("legend_free", size="0 GB"))
         self.legend_free.setStyleSheet("color: #90A4AE; font-size: 12px; font-weight: 500;")
 
         info_layout.addWidget(self.legend_used)
@@ -72,10 +73,11 @@ class DiskGaugeWidget(QFrame):
         self.free_bytes = free
         self.cleanable_bytes = cleanable
 
-        self.stats_label.setText(f"Свободно: {format_bytes(free)} / Всего: {format_bytes(total)}")
-        self.legend_used.setText(f"■ Занято: {format_bytes(max(0, used - cleanable))}")
-        self.legend_cleanable.setText(f"■ Выбрано к очистке: {format_bytes(cleanable)}")
-        self.legend_free.setText(f"■ Свободно: {format_bytes(free)}")
+        self.drive_label.setText(t("system_drive_title"))
+        self.stats_label.setText(t("free_total_fmt", free=format_bytes(free), total=format_bytes(total)))
+        self.legend_used.setText(t("legend_used", size=format_bytes(max(0, used - cleanable))))
+        self.legend_cleanable.setText(t("legend_cleanable", size=format_bytes(cleanable)))
+        self.legend_free.setText(t("legend_free", size=format_bytes(free)))
 
         self.bar.set_values(total, used, cleanable)
 
@@ -116,7 +118,7 @@ class DiskUsageBar(QWidget):
             painter.setBrush(QBrush(QColor("#0078D4")))
             painter.drawRoundedRect(0, 0, used_width, height, radius, radius)
 
-        # Cleanable space segment (green/teal highlight)
+        # Cleanable space segment (green highlight)
         cleanable_width = int((self.cleanable / self.total) * width)
         if cleanable_width > 0:
             painter.setBrush(QBrush(QColor("#4CAF50")))

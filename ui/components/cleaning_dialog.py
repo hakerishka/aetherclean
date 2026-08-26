@@ -1,5 +1,5 @@
 """
-Real-time Cleaning Progress Modal Dialog for AetherClean.
+Real-time Cleaning Progress Modal Dialog for AetherClean with i18n support.
 Shows non-blocking live deletion progress, real-time activity log, live bytes counter, and summary.
 """
 
@@ -9,8 +9,9 @@ from PySide6.QtWidgets import (
     QTextEdit, QPushButton, QFrame, QGridLayout
 )
 from PySide6.QtCore import Qt, Signal, Slot
-from PySide6.QtGui import QFont, QTextCursor, QColor
+from PySide6.QtGui import QTextCursor
 from core.models import format_bytes
+from core.i18n import t
 
 
 class CleaningProgressDialog(QDialog):
@@ -25,7 +26,7 @@ class CleaningProgressDialog(QDialog):
         self.freed_bytes = 0
         self.skipped_count = 0
 
-        self.setWindowTitle("Очистка системы — AetherClean")
+        self.setWindowTitle(t("clean_dlg_title"))
         self.resize(720, 520)
         self.setMinimumSize(600, 420)
         self._init_ui()
@@ -36,13 +37,13 @@ class CleaningProgressDialog(QDialog):
         layout.setSpacing(14)
 
         # Header Title
-        self.header_title = QLabel("🧹 Выполняется безопасная очистка")
+        self.header_title = QLabel(t("clean_dlg_header_active"))
         self.header_title.setObjectName("headerTitle")
         self.header_title.setStyleSheet("font-size: 18px; font-weight: bold; color: #FFFFFF;")
         layout.addWidget(self.header_title)
 
         # Current Item & File Label
-        self.item_label = QLabel(f"Подготовка к очистке {self.total_items_count} элементов...")
+        self.item_label = QLabel(f"Preparing to clean {self.total_items_count} items...")
         self.item_label.setStyleSheet("font-size: 13px; font-weight: 600; color: #60CDFF;")
         self.item_label.setWordWrap(True)
         layout.addWidget(self.item_label)
@@ -68,17 +69,17 @@ class CleaningProgressDialog(QDialog):
 
         self.metric_freed = QLabel("0 B")
         self.metric_freed.setStyleSheet("font-size: 16px; font-weight: bold; color: #4CAF50;")
-        lbl_freed = QLabel("💾 Освобождено:")
+        lbl_freed = QLabel(t("clean_dlg_metric_freed"))
         lbl_freed.setStyleSheet("color: #AAAAAA; font-size: 12px;")
 
         self.metric_items = QLabel(f"0 / {self.total_items_count}")
         self.metric_items.setStyleSheet("font-size: 16px; font-weight: bold; color: #60CDFF;")
-        lbl_items = QLabel("📁 Обработано категорий:")
+        lbl_items = QLabel(t("clean_dlg_metric_items"))
         lbl_items.setStyleSheet("color: #AAAAAA; font-size: 12px;")
 
         self.metric_skipped = QLabel("0")
         self.metric_skipped.setStyleSheet("font-size: 16px; font-weight: bold; color: #FFA726;")
-        lbl_skipped = QLabel("ℹ️ Занятых файлов:")
+        lbl_skipped = QLabel(t("clean_dlg_metric_skipped"))
         lbl_skipped.setStyleSheet("color: #AAAAAA; font-size: 12px;")
 
         metrics_layout.addWidget(lbl_freed, 0, 0)
@@ -93,7 +94,7 @@ class CleaningProgressDialog(QDialog):
         layout.addWidget(metrics_frame)
 
         # Console Log Feed
-        log_title = QLabel("Журнал операций в реальном времени:")
+        log_title = QLabel(t("clean_dlg_log_title"))
         log_title.setStyleSheet("color: #AAAAAA; font-size: 11px; font-weight: bold;")
         layout.addWidget(log_title)
 
@@ -114,7 +115,7 @@ class CleaningProgressDialog(QDialog):
 
         # Bottom Button Row
         btn_layout = QHBoxLayout()
-        self.action_btn = QPushButton("⏹️ Остановить очистку")
+        self.action_btn = QPushButton(t("clean_dlg_btn_stop"))
         self.action_btn.setObjectName("secondaryButton")
         self.action_btn.clicked.connect(self._on_action_clicked)
 
@@ -128,9 +129,8 @@ class CleaningProgressDialog(QDialog):
         self.item_label.setText(f"[{current_idx}/{total_items}] {item_title}")
 
         if current_path:
-            # Shorten very long paths for UI readability
             display_path = current_path if len(current_path) < 75 else "..." + current_path[-72:]
-            self.file_label.setText(f"Файл: {display_path}")
+            self.file_label.setText(f"File: {display_path}")
         else:
             self.file_label.setText("")
 
@@ -164,16 +164,16 @@ class CleaningProgressDialog(QDialog):
         self.freed_bytes = freed_bytes
 
         self.progress_bar.setValue(100)
-        self.header_title.setText("✅ Очистка успешно завершена!")
+        self.header_title.setText(t("clean_dlg_header_finished"))
         self.header_title.setStyleSheet("font-size: 18px; font-weight: bold; color: #81C784;")
 
-        self.item_label.setText(f"Успешно обработано объектов: {processed_count}")
-        self.file_label.setText(f"Всего освобождено места на диске: {format_bytes(freed_bytes)}")
+        self.item_label.setText(f"Processed items: {processed_count}")
+        self.file_label.setText(f"Total space freed: {format_bytes(freed_bytes)}")
 
         self.metric_freed.setText(format_bytes(freed_bytes))
         self.metric_items.setText(f"{processed_count} / {self.total_items_count}")
 
-        self.action_btn.setText("Закрыть")
+        self.action_btn.setText(t("clean_dlg_btn_close"))
         self.action_btn.setObjectName("primaryButton")
         self.action_btn.setStyle(self.action_btn.style())
 
@@ -182,7 +182,7 @@ class CleaningProgressDialog(QDialog):
             self.accept()
         else:
             self.action_btn.setEnabled(False)
-            self.action_btn.setText("Остановка...")
+            self.action_btn.setText("Stopping...")
             self.cancel_requested.emit()
 
     def closeEvent(self, event):

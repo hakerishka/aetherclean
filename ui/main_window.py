@@ -1,6 +1,6 @@
 """
 Main Application Window for AetherClean.
-Modern Windows 11 Fluent Dark UI with real-time non-blocking scan and clean progress, safety inspectors, and rollback management.
+Modern Windows 11 Fluent Dark UI with real-time non-blocking scan and clean progress, safety inspectors, and bilingual i18n support.
 """
 
 import os
@@ -20,6 +20,7 @@ from core.models import ScanResult, ScanItem, CleanAction, RiskLevel, format_byt
 from core.scanner import MasterScanner, DiskInfo
 from core.quarantine_manager import QuarantineManager
 from core.restore_point import RestorePointManager
+from core.i18n import I18nManager, t
 from ui.theme import DARK_THEME_QSS
 from ui.components.disk_gauge import DiskGaugeWidget
 from ui.components.category_tree import CategoryTreeWidget
@@ -87,14 +88,18 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("AetherClean — Интеллектуальный анализ и очистка Windows 11")
-        self.resize(1180, 780)
-        self.setMinimumSize(950, 600)
-
         # Paths
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.settings_path = os.path.join(base_dir, "config", "settings.yaml")
         self.settings = self._load_settings()
+
+        # Set configured language
+        lang = self.settings.get("general", {}).get("language", "en")
+        I18nManager.set_lang(lang)
+
+        self.setWindowTitle(f"AetherClean — {t('app_subtitle')}")
+        self.resize(1180, 780)
+        self.setMinimumSize(950, 600)
 
         # Core engines
         self.scanner = MasterScanner(self.settings)
@@ -129,9 +134,9 @@ class MainWindow(QMainWindow):
         header_layout = QHBoxLayout()
 
         title_col = QVBoxLayout()
-        app_title = QLabel("🛡️ AetherClean")
+        app_title = QLabel(t("app_title"))
         app_title.setObjectName("headerTitle")
-        app_sub = QLabel("Интеллектуальный анализатор и безопасная очистка диска Windows 11")
+        app_sub = QLabel(t("app_subtitle"))
         app_sub.setObjectName("headerSubtitle")
         title_col.addWidget(app_title)
         title_col.addWidget(app_sub)
@@ -140,15 +145,15 @@ class MainWindow(QMainWindow):
         header_layout.addStretch()
 
         # Quick utility buttons
-        self.restore_pt_btn = QPushButton("🛡️ Создать точку восстановления")
+        self.restore_pt_btn = QPushButton(t("btn_restore_point"))
         self.restore_pt_btn.setObjectName("secondaryButton")
         self.restore_pt_btn.clicked.connect(self._create_restore_point)
 
-        self.quarantine_btn = QPushButton("📦 Карантин")
+        self.quarantine_btn = QPushButton(t("btn_quarantine"))
         self.quarantine_btn.setObjectName("secondaryButton")
         self.quarantine_btn.clicked.connect(self._open_quarantine)
 
-        self.settings_btn = QPushButton("⚙️ Настройки")
+        self.settings_btn = QPushButton(t("btn_settings"))
         self.settings_btn.setObjectName("secondaryButton")
         self.settings_btn.clicked.connect(self._open_settings)
 
@@ -171,7 +176,7 @@ class MainWindow(QMainWindow):
         action_layout.setSpacing(10)
 
         # Big Scan Button
-        self.scan_btn = QPushButton("🔍 Начать умный анализ")
+        self.scan_btn = QPushButton(t("btn_start_scan"))
         self.scan_btn.setObjectName("primaryButton")
         self.scan_btn.setMinimumWidth(180)
         self.scan_btn.clicked.connect(self._start_or_stop_scan)
@@ -180,17 +185,17 @@ class MainWindow(QMainWindow):
         action_layout.addSpacing(10)
 
         # Selection helpers
-        self.safe_only_btn = QPushButton("🟢 Только безопасные")
+        self.safe_only_btn = QPushButton(t("btn_safe_only"))
         self.safe_only_btn.setObjectName("secondaryButton")
         self.safe_only_btn.clicked.connect(self._select_safe_only)
         self.safe_only_btn.setEnabled(False)
 
-        self.select_all_btn = QPushButton("Выбрать всё")
+        self.select_all_btn = QPushButton(t("btn_select_all"))
         self.select_all_btn.setObjectName("secondaryButton")
         self.select_all_btn.clicked.connect(lambda: self.tree.select_all(True))
         self.select_all_btn.setEnabled(False)
 
-        self.unselect_all_btn = QPushButton("Снять всё")
+        self.unselect_all_btn = QPushButton(t("btn_unselect_all"))
         self.unselect_all_btn.setObjectName("secondaryButton")
         self.unselect_all_btn.clicked.connect(lambda: self.tree.select_all(False))
         self.unselect_all_btn.setEnabled(False)
@@ -202,15 +207,15 @@ class MainWindow(QMainWindow):
         action_layout.addStretch()
 
         # Action mode combo
-        action_layout.addWidget(QLabel("Куда удалять:"))
+        action_layout.addWidget(QLabel(t("lbl_action_target")))
         self.action_mode_combo = QComboBox()
-        self.action_mode_combo.addItem("🗑️ Корзина Windows", CleanAction.RECYCLE_BIN)
-        self.action_mode_combo.addItem("📦 Карантин с откатом", CleanAction.QUARANTINE)
-        self.action_mode_combo.addItem("⚠️ Безвозвратно", CleanAction.PERMANENT_DELETE)
+        self.action_mode_combo.addItem(t("action_recycle_bin"), CleanAction.RECYCLE_BIN)
+        self.action_mode_combo.addItem(t("action_quarantine"), CleanAction.QUARANTINE)
+        self.action_mode_combo.addItem(t("action_permanent"), CleanAction.PERMANENT_DELETE)
         action_layout.addWidget(self.action_mode_combo)
 
         # Big Clean Button
-        self.clean_btn = QPushButton("🧹 Очистить выбранное (0 B)")
+        self.clean_btn = QPushButton(t("btn_clean_selected", size="0 B"))
         self.clean_btn.setObjectName("primaryButton")
         self.clean_btn.setStyleSheet("""
             QPushButton#primaryButton {
@@ -253,7 +258,7 @@ class MainWindow(QMainWindow):
         # 6. Status Bar
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
-        self.status_bar.showMessage("Готов к работе. Нажмите «Начать умный анализ» для проверки системного диска.")
+        self.status_bar.showMessage(t("status_ready"))
 
     def _refresh_disk_stats(self, cleanable: int = 0):
         stats = DiskInfo.get_drive_stats("C:")
@@ -270,11 +275,11 @@ class MainWindow(QMainWindow):
             return
 
         # Start Scan
-        self.scan_btn.setText("⏹️ Остановить анализ")
+        self.scan_btn.setText(t("btn_stop_scan"))
         self.scan_btn.setObjectName("dangerButton")
         self.scan_btn.setStyle(self.scan_btn.style())
         self.progress_card.setVisible(True)
-        self.progress_card.set_progress("Инициализация реестра и сканеров...", 5)
+        self.progress_card.set_progress(t("status_scanning_init"), 5)
         self.clean_btn.setEnabled(False)
         self.safe_only_btn.setEnabled(False)
         self.select_all_btn.setEnabled(False)
@@ -290,7 +295,7 @@ class MainWindow(QMainWindow):
     def _cancel_scan(self):
         if self.scanner:
             self.scanner.cancel()
-        self.progress_card.set_progress("Остановка сканирования...", 99)
+        self.progress_card.set_progress("Stopping scan...", 99)
 
     @Slot(str, int)
     def _on_scan_progress(self, message: str, percentage: int):
@@ -300,7 +305,7 @@ class MainWindow(QMainWindow):
     @Slot(object)
     def _on_scan_finished(self, result: ScanResult):
         self.current_scan_result = result
-        self.scan_btn.setText("🔍 Начать умный анализ")
+        self.scan_btn.setText(t("btn_start_scan"))
         self.scan_btn.setObjectName("primaryButton")
         self.scan_btn.setStyle(self.scan_btn.style())
         self.progress_card.setVisible(False)
@@ -315,25 +320,22 @@ class MainWindow(QMainWindow):
 
         self._on_tree_selection_changed()
 
-        msg = f"Анализ завершен. Найдено категорий мусора на {format_bytes(result.total_bytes)}."
+        msg = t("status_scan_complete_fmt", size=format_bytes(result.total_bytes), count=len(category_groups))
         self.status_bar.showMessage(msg)
-
-        if result.errors:
-            print(f"Warnings during scan: {result.errors}")
 
     @Slot(str)
     def _on_scan_error(self, err_msg: str):
-        self.scan_btn.setText("🔍 Начать умный анализ")
+        self.scan_btn.setText(t("btn_start_scan"))
         self.scan_btn.setObjectName("primaryButton")
         self.scan_btn.setStyle(self.scan_btn.style())
         self.progress_card.setVisible(False)
-        QMessageBox.critical(self, "Ошибка сканирования", f"Произошла ошибка:\n{err_msg}")
+        QMessageBox.critical(self, "Scan Error", f"An error occurred:\n{err_msg}")
 
     def _on_tree_selection_changed(self):
         selected_items = self.tree.get_selected_items()
         selected_bytes = sum(item.total_size for item in selected_items)
 
-        self.clean_btn.setText(f"🧹 Очистить выбранное ({format_bytes(selected_bytes)})")
+        self.clean_btn.setText(t("btn_clean_selected", size=format_bytes(selected_bytes)))
         self.clean_btn.setEnabled(len(selected_items) > 0 and selected_bytes > 0)
 
         self._refresh_disk_stats(cleanable=selected_bytes)
@@ -346,14 +348,14 @@ class MainWindow(QMainWindow):
         self.tree.select_all_safe()
 
     def _create_restore_point(self):
-        self.status_bar.showMessage("Создание точки восстановления Windows...")
-        success, msg = RestorePointManager.create_restore_point("AetherClean Ручная точка")
+        self.status_bar.showMessage("Creating Windows System Restore Point...")
+        success, msg = RestorePointManager.create_restore_point("AetherClean Manual Restore Point")
         if success:
-            QMessageBox.information(self, "Точка восстановления", msg)
-            self.status_bar.showMessage("Точка восстановления готова.")
+            QMessageBox.information(self, "Restore Point", msg)
+            self.status_bar.showMessage("System Restore Point ready.")
         else:
-            QMessageBox.warning(self, "Точка восстановления", msg)
-            self.status_bar.showMessage("Не удалось создать точку восстановления.")
+            QMessageBox.warning(self, "Restore Point", msg)
+            self.status_bar.showMessage("Failed to create restore point.")
 
     def _open_quarantine(self):
         dlg = QuarantineDialog(self.quarantine_mgr, self)
@@ -364,6 +366,12 @@ class MainWindow(QMainWindow):
         if dlg.exec() == QDialog.Accepted:
             self.settings = self._load_settings()
             self.scanner.settings = self.settings
+            # Update UI labels
+            self.setWindowTitle(f"AetherClean — {t('app_subtitle')}")
+            self._init_ui()
+            if self.current_scan_result:
+                self.tree.populate(self.current_scan_result.get_by_category())
+                self._on_tree_selection_changed()
 
     def _execute_clean(self):
         selected_items = self.tree.get_selected_items()
@@ -378,29 +386,29 @@ class MainWindow(QMainWindow):
         has_medium_risk = any(i.risk_level == RiskLevel.MEDIUM for i in selected_items)
 
         action_names = {
-            CleanAction.RECYCLE_BIN: "перемещены в Корзину Windows",
-            CleanAction.QUARANTINE: "помещены в Карантин AetherClean (с возможностью отката)",
-            CleanAction.PERMANENT_DELETE: "БЕЗВОЗВРАТНО УДАЛЕНЫ",
+            CleanAction.RECYCLE_BIN: "moved to Windows Recycle Bin",
+            CleanAction.QUARANTINE: "isolated in AetherClean Quarantine (with 1-click restore)",
+            CleanAction.PERMANENT_DELETE: "PERMANENTLY DELETED",
         }
 
         warning_notes = []
         if has_high_risk:
-            warning_notes.append("⚠️ Среди выбранных файлов есть элементы ВЫСОКОГО РИСКА (личные файлы или системные компоненты).")
+            warning_notes.append("⚠️ HIGH RISK items (user data / system files) are selected.")
         if has_medium_risk:
-            warning_notes.append("ℹ️ Среди выбранных файлов есть остатки удаленных программ (AppData).")
+            warning_notes.append("ℹ️ Orphaned application remnants (AppData) are selected.")
 
         warning_text = "\n".join(warning_notes) + "\n\n" if warning_notes else ""
 
         confirm_msg = (
-            f"Выбрано элементов: {len(selected_items)} ({format_bytes(selected_bytes)}).\n\n"
-            f"Файлы будут {action_names.get(action)}.\n\n"
+            f"Selected items: {len(selected_items)} ({format_bytes(selected_bytes)}).\n\n"
+            f"Files will be {action_names.get(action)}.\n\n"
             f"{warning_text}"
-            f"Вы уверены, что хотите продолжить очистку?"
+            f"Are you sure you want to proceed with cleaning?"
         )
 
         reply = QMessageBox.question(
             self,
-            "Подтверждение очистки",
+            "Confirm Cleaning",
             confirm_msg,
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.Yes
@@ -411,7 +419,7 @@ class MainWindow(QMainWindow):
 
         # Create Restore point if enabled and system items are present
         if self.settings.get("general", {}).get("create_restore_point", True) and (has_high_risk or has_medium_risk):
-            self.status_bar.showMessage("Создание точки восстановления перед очисткой...")
+            self.status_bar.showMessage("Creating Restore Point before cleanup...")
             RestorePointManager.create_restore_point("AetherClean Auto Restore Point")
 
         # Open non-blocking live progress dialog
@@ -424,14 +432,14 @@ class MainWindow(QMainWindow):
             lambda freed, count, errs: progress_dlg.set_cleaning_finished(freed, count, errs)
         )
         self.clean_worker.error_signal.connect(
-            lambda err: progress_dlg.append_log(f"Критическая ошибка: {err}", "err")
+            lambda err: progress_dlg.append_log(f"Critical error: {err}", "err")
         )
         progress_dlg.cancel_requested.connect(self.quarantine_mgr.cancel)
 
         # Start clean worker thread
         self.clean_worker.start()
 
-        # Run dialog modal event loop (smooth updates, non-blocking to worker)
+        # Run dialog modal event loop
         progress_dlg.exec()
 
         self._refresh_disk_stats(cleanable=0)

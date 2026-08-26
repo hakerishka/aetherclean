@@ -1,11 +1,12 @@
 """
-Data models and enumerations for AetherClean.
+Data models and enumerations for AetherClean with i18n support.
 """
 
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+from .i18n import t
 
 
 class RiskLevel(str, Enum):
@@ -16,11 +17,11 @@ class RiskLevel(str, Enum):
     @property
     def badge_text(self) -> str:
         if self == RiskLevel.SAFE:
-            return "🟢 БЕЗОПАСНО"
+            return t("risk_safe")
         elif self == RiskLevel.MEDIUM:
-            return "🟡 ВНИМАНИЕ"
+            return t("risk_medium")
         else:
-            return "🔴 ТРЕБУЕТ ПРОВЕРКИ"
+            return t("risk_high")
 
     @property
     def color_hex(self) -> str:
@@ -44,17 +45,17 @@ class Category(str, Enum):
 
     @property
     def display_name(self) -> str:
-        names = {
-            Category.APP_CACHE: "Кэши приложений",
-            Category.ORPHANED_APPDATA: "Остатки удаленных программ (AppData)",
-            Category.SYSTEM_JUNK: "Системный мусор и дампы",
-            Category.INSTALLER_CACHE: "Неиспользуемые установщики Windows",
-            Category.DRIVERS: "Хранилище драйверов",
-            Category.LARGE_DORMANT: "Забытые тяжелые файлы (>500MB)",
-            Category.DISM_COMPONENT: "Хранилище компонентов WinSxS",
-            Category.REGISTRY_JUNK: "Остатки в реестре Windows (Реестр)",
+        key_map = {
+            Category.APP_CACHE: "cat_app_cache",
+            Category.ORPHANED_APPDATA: "cat_orphaned_appdata",
+            Category.SYSTEM_JUNK: "cat_system_junk",
+            Category.INSTALLER_CACHE: "cat_installer_cache",
+            Category.DRIVERS: "cat_drivers",
+            Category.LARGE_DORMANT: "cat_large_dormant",
+            Category.DISM_COMPONENT: "cat_dism_component",
+            Category.REGISTRY_JUNK: "cat_registry_junk",
         }
-        return names.get(self, self.value)
+        return t(key_map.get(self, "cat_app_cache"))
 
     @property
     def icon_name(self) -> str:

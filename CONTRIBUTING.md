@@ -1,32 +1,33 @@
-# Руководство по участию в разработке (Contributing to AetherClean)
+# Contributing to AetherClean
 
-Спасибо за интерес к развитию проекта **AetherClean**!
+Thank you for your interest in contributing to **AetherClean**!
 
 ---
 
-## 🛠️ Как добавить правила для новых программ
+## 🛠️ How to Add Rules for New Applications
 
-Большинство новых программ можно поддержать без написания кода, просто добавив декларативное правило в каталог `config/rules/`:
+Most applications can be supported without writing Python code, simply by defining a declarative YAML rule in `config/rules/`:
 
-1. Откройте или создайте YAML файл в `config/rules/` (например, `config/rules/app_caches.yaml`).
-2. Добавьте описание нового приложения:
+1. Open or create a YAML file in `config/rules/` (e.g. `config/rules/app_caches.yaml`).
+2. Add the application rule specification:
    ```yaml
    - id: "my_app_cache"
      name: "My Application Cache"
      category: "app_cache"
      risk_level: "safe"
-     safety_label: "Безопасно: временный кэш приложения"
-     description: "Кэш миниатюр и логов My Application."
+     safety_label: "Safe: temporary application cache"
+     description: "Thumbnail, GPU and media cache for My Application."
      paths:
        - "%LOCALAPPDATA%\\MyApp\\Cache"
+       - "%LOCALAPPDATA%\\MyApp\\GPUCache"
    ```
-3. Проверьте работоспособность: запустите `pytest tests/`.
+3. Verify your rule by running tests: `pytest tests/`.
 
 ---
 
-## 🧪 Запуск тестов
+## 🧪 Running the Test Suite
 
-Перед отправкой Pull Request убедитесь, что все тесты проходят:
+Before submitting a Pull Request, ensure that all automated tests pass:
 
 ```bash
 pip install -r requirements.txt
@@ -35,8 +36,9 @@ pytest tests/ -v
 
 ---
 
-## 📜 Стиль кода
+## 📜 Code Style & Safety Guidelines
 
-- Соблюдайте PEP 8.
-- Добавляйте аннотации типов для всех публичных методов.
-- Обеспечивайте безопасность и не допускайте добавления системных путей Windows в автоматическую очистку.
+- Follow **PEP 8** conventions.
+- Provide type annotations for all public methods and functions.
+- Never add critical Windows system directories (`C:\Windows\System32`, `WinSxS`, etc.) to automated deletion targets.
+- Ensure all new UI strings are added to `core/i18n.py` for both English and Russian.
