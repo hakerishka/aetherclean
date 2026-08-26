@@ -1,4 +1,4 @@
-name: CI Test & Lint Suite
+name: AetherClean Windows CI
 
 on:
   push:
@@ -9,12 +9,11 @@ on:
 
 jobs:
   test:
-    name: Test on Python ${{ matrix.python-version }} (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+    name: Windows Test (Python ${{ matrix.python-version }})
+    runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [ windows-latest, ubuntu-latest ]
         python-version: [ "3.10", "3.11", "3.12" ]
 
     steps:
@@ -35,6 +34,5 @@ jobs:
       - name: Run PyTest Suite
         env:
           PYTHONPATH: .
-          QT_QPA_PLATFORM: offscreen
         run: |
           python -m pytest tests/ -v
