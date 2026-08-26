@@ -44,7 +44,11 @@ dev = [
 aetherclean = "main:main"
 
 [project.urls]
-Homepage = "https://github.com/aetherclean/aetherclean"
-Documentation = "https://github.com/aetherclean/aetherclean/blob/main/DOCUMENTATION.md"
-"Bug Tracker" = "https://github.com/aetherclean/aetherclean/issues"
-"AI Skills" = "https://github.com/aetherclean/aetherclean/blob/main/AI_SKILL.md"
+Homepage = "https://github.com/hakerishka/aetherclean"
+Documentation = "https://github.com/hakerishka/aetherclean/blob/main/DOCUMENTATION.md"
+"Bug Tracker" = "https://github.com/hakerishka/aetherclean/issues"
+"AI Skills" = "https://github.com/hakerishka/aetherclean/blob/main/AI_SKILL.md"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
