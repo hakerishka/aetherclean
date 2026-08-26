@@ -1,26 +1,24 @@
 """
 Windows Registry Junk & Orphaned Keys Scanner for AetherClean.
 Detects broken startup entries, dead App Paths, orphaned Software keys, and invalid shell extensions.
+Cross-platform safe (graceful fallback when run outside Windows).
 """
 
 import os
 import re
-import winreg
 from typing import List, Optional, Callable, Tuple
 from core.models import ScanItem, FileEntry, RiskLevel, Category
 from core.registry_analyzer import RegistryAnalyzer
 from .base_scanner import BaseScanner
 
+try:
+    import winreg
+except ImportError:
+    winreg = None
+
 
 class RegistryJunkScanner(BaseScanner):
     """Scans Windows Registry for dead references, broken startup entries, and orphaned software branches."""
-
-    RUN_KEYS = [
-        (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", "HKCU\\Run"),
-        (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Run", "HKLM\\Run"),
-        (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\RunOnce", "HKCU\\RunOnce"),
-        (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\RunOnce", "HKLM\\RunOnce"),
-    ]
 
     APP_PATHS_KEY = r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths"
 
@@ -32,6 +30,9 @@ class RegistryJunkScanner(BaseScanner):
     }
 
     def scan(self, progress_callback: Optional[Callable[[str, int], None]] = None) -> List[ScanItem]:
+        if winreg is None:
+            return []
+
         if not self.registry:
             self.registry = RegistryAnalyzer()
             self.registry.load()
@@ -40,28 +41,37 @@ class RegistryJunkScanner(BaseScanner):
 
         # 1. Dead Startup Entries
         if progress_callback:
-            progress_callback("Проверка битых записей автозагрузки в реестре...", 15)
+            progress_callback("Checking broken startup entries in registry...", 15)
         startup_items = self._scan_dead_startup_entries()
         items.extend(startup_items)
 
         # 2. Dead App Paths
         if progress_callback:
-            progress_callback("Проверка устаревших путей приложений (App Paths)...", 45)
+            progress_callback("Checking orphaned application paths (App Paths)...", 45)
         app_path_items = self._scan_dead_app_paths()
         items.extend(app_path_items)
 
         # 3. Orphaned Software Keys (HKCU\Software & HKLM\Software)
         if progress_callback:
-            progress_callback("Поиск осиротевших ключей удаленных программ в HKCU/HKLM...", 75)
+            progress_callback("Scanning orphaned software keys in HKCU/HKLM...", 75)
         orphaned_soft_items = self._scan_orphaned_software_keys()
         items.extend(orphaned_soft_items)
 
         return items
 
     def _scan_dead_startup_entries(self) -> List[ScanItem]:
-        dead_entries: List[FileEntry] = []
+        if winreg is None:
+            return []
 
-        for root_key, subkey_path, label in self.RUN_KEYS:
+        dead_entries: List[FileEntry] = []
+        run_keys = [
+            (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", "HKCU\\Run"),
+            (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Run", "HKLM\\Run"),
+            (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\RunOnce", "HKCU\\RunOnce"),
+            (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\RunOnce", "HKLM\\RunOnce"),
+        ]
+
+        for root_key, subkey_path, label in run_keys:
             try:
                 with winreg.OpenKey(root_key, subkey_path, 0, winreg.KEY_READ) as key:
                     num_values = winreg.QueryInfoKey(key)[1]
@@ -70,7 +80,6 @@ class RegistryJunkScanner(BaseScanner):
                         if not val_data or not isinstance(val_data, str):
                             continue
 
-                        # Extract executable file path from command line string
                         exe_path = self._extract_exe_path(val_data)
                         if exe_path and not os.path.exists(exe_path):
                             dead_entries.append(
@@ -78,7 +87,7 @@ class RegistryJunkScanner(BaseScanner):
                                     path=f"{label} -> {val_name}",
                                     size=1024,
                                     is_dir=False,
-                                    details=f"Запуск несуществующего файла: {exe_path}"
+                                    details=f"Target executable does not exist: {exe_path}"
                                 )
                             )
             except (OSError, PermissionError):
@@ -88,18 +97,18 @@ class RegistryJunkScanner(BaseScanner):
             return []
 
         reason = (
-            f"В ветках автозагрузки реестра обнаружено {len(dead_entries)} записей, "
-            f"ссылающихся на несуществующие исполняемые файлы (программы удалены, но записи остались)."
+            f"Found {len(dead_entries)} registry startup entries referencing non-existent executable files "
+            f"(software was removed but autostart commands remained)."
         )
 
         return [
             ScanItem(
                 id="dead_registry_startup_entries",
-                title="Битые записи автозагрузки в реестре",
+                title="Broken Registry Startup Entries",
                 category=Category.REGISTRY_JUNK,
                 risk_level=RiskLevel.SAFE,
-                safety_label="Безопасно: ссылки на удаленные исполняемые файлы в автозагрузке",
-                description="Записи в реестре Windows Run/RunOnce, оставшиеся от удаленных программ.",
+                safety_label="Safe: invalid startup links to uninstalled executables",
+                description="Orphaned Run and RunOnce auto-start records pointing to deleted files.",
                 reason=reason,
                 total_size=len(dead_entries) * 1024,
                 file_count=len(dead_entries),
@@ -111,6 +120,9 @@ class RegistryJunkScanner(BaseScanner):
         ]
 
     def _scan_dead_app_paths(self) -> List[ScanItem]:
+        if winreg is None:
+            return []
+
         dead_paths: List[FileEntry] = []
 
         for root_key, label in [(winreg.HKEY_LOCAL_MACHINE, "HKLM"), (winreg.HKEY_CURRENT_USER, "HKCU")]:
@@ -130,7 +142,7 @@ class RegistryJunkScanner(BaseScanner):
                                                 path=f"{label}\\...\\App Paths\\{sub_name}",
                                                 size=1024,
                                                 is_dir=False,
-                                                details=f"Путь не существует: {clean_path}"
+                                                details=f"Path does not exist: {clean_path}"
                                             )
                                         )
                         except (OSError, PermissionError):
@@ -142,18 +154,17 @@ class RegistryJunkScanner(BaseScanner):
             return []
 
         reason = (
-            f"В реестре App Paths найдено {len(dead_paths)} записей быстрого запуска, "
-            f"указывающих на удаленные исполняемые файлы."
+            f"Found {len(dead_paths)} orphaned App Paths entries in registry pointing to deleted files."
         )
 
         return [
             ScanItem(
                 id="dead_registry_app_paths",
-                title="Устаревшие пути приложений в реестре (App Paths)",
+                title="Orphaned App Paths Entries in Registry",
                 category=Category.REGISTRY_JUNK,
                 risk_level=RiskLevel.SAFE,
-                safety_label="Безопасно: пути вызова удаленных программ через диалог «Выполнить»",
-                description="Регистрация команд быстрого запуска для программ, которые больше не присутствуют на диске.",
+                safety_label="Safe: quick-run links for uninstalled applications",
+                description="Registered run-command shortcuts for programs no longer installed on the system.",
                 reason=reason,
                 total_size=len(dead_paths) * 1024,
                 file_count=len(dead_paths),
@@ -165,9 +176,11 @@ class RegistryJunkScanner(BaseScanner):
         ]
 
     def _scan_orphaned_software_keys(self) -> List[ScanItem]:
+        if winreg is None:
+            return []
+
         orphaned_branches: List[FileEntry] = []
 
-        # Check HKCU\Software keys
         try:
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Software", 0, winreg.KEY_READ) as key:
                 num_subkeys = winreg.QueryInfoKey(key)[0]
@@ -178,17 +191,15 @@ class RegistryJunkScanner(BaseScanner):
                     if norm_name in self.SYSTEM_VENDOR_WHITELIST:
                         continue
 
-                    # Check if this vendor / app exists in installed programs
                     is_orphan, reason = self.registry.is_folder_orphaned(sub_name)
                     if is_orphan:
-                        # Cross-check if any files exist in Program Files or AppData
                         if not self._check_files_exist_for_app(sub_name):
                             orphaned_branches.append(
                                 FileEntry(
                                     path=f"HKCU\\Software\\{sub_name}",
                                     size=2048,
                                     is_dir=False,
-                                    details=f"Ветка конфигурации удаленной программы: {reason}"
+                                    details=f"Orphaned configuration branch: {reason}"
                                 )
                             )
         except (OSError, PermissionError):
@@ -198,18 +209,17 @@ class RegistryJunkScanner(BaseScanner):
             return []
 
         reason = (
-            f"Обнаружено {len(orphaned_branches)} оставшихся веток настроек в HKCU\\Software "
-            f"от программ, которые удалены из системы и не имеют связанных файлов на диске."
+            f"Found {len(orphaned_branches)} orphaned HKCU\\Software keys from uninstalled applications with zero files on disk."
         )
 
         return [
             ScanItem(
                 id="orphaned_software_registry_keys",
-                title="Оставшиеся ветки конфигурации удаленного ПО (HKCU\\Software)",
+                title="Orphaned Software Settings in Registry (HKCU\\Software)",
                 category=Category.REGISTRY_JUNK,
                 risk_level=RiskLevel.MEDIUM,
-                safety_label="Внимание: старые настройки удаленных программ в реестре",
-                description="Ветки реестра, в которых программы хранили свои настройки. Программы удалены, но записи остались.",
+                safety_label="Review: old settings branches from deleted software",
+                description="Configuration keys left behind by uninstalled applications in user registry hive.",
                 reason=reason,
                 total_size=len(orphaned_branches) * 2048,
                 file_count=len(orphaned_branches),
@@ -222,7 +232,6 @@ class RegistryJunkScanner(BaseScanner):
 
     @staticmethod
     def _extract_exe_path(cmd_line: str) -> Optional[str]:
-        """Extracts executable path from a Windows command line string."""
         s = cmd_line.strip()
         if s.startswith('"'):
             end_quote = s.find('"', 1)
@@ -237,7 +246,6 @@ class RegistryJunkScanner(BaseScanner):
 
     @staticmethod
     def _check_files_exist_for_app(app_name: str) -> bool:
-        """Quick check if any directory with app_name exists in Program Files or AppData."""
         candidates = [
             os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), app_name),
             os.path.join(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"), app_name),
