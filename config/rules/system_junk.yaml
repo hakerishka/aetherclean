@@ -1,0 +1,92 @@
+# Declarative System Junk Rules for AetherClean
+version: "1.0"
+rules:
+  # --- Windows Temp & Logs ---
+  - id: "windows_user_temp"
+    name: "Пользовательские временные файлы (%TEMP%)"
+    category: "system_junk"
+    risk_level: "safe"
+    safety_label: "Безопасно: временные файлы приложений, не используемые прямо сейчас"
+    description: "Временные файлы пользовательских программ в папке %TEMP%. Блокированные используемые файлы пропускаются."
+    paths:
+      - "%TEMP%"
+    options:
+      delete_contents_only: true
+      min_age_hours: 4
+
+  - id: "windows_system_temp"
+    name: "Системные временные файлы (C:\\Windows\\Temp)"
+    category: "system_junk"
+    risk_level: "safe"
+    safety_label: "Безопасно: системный кэш и временные файлы служб"
+    description: "Временные файлы процессов и установщиков Windows в папке Windows\\Temp."
+    paths:
+      - "%WINDIR%\\Temp"
+    options:
+      delete_contents_only: true
+      min_age_hours: 6
+
+  - id: "wer_crash_dumps"
+    name: "Дампы сбоев программ (Windows Error Reporting)"
+    category: "system_junk"
+    risk_level: "safe"
+    safety_label: "Безопасно: дампы падений программ (*.dmp), занимающие гигабайты"
+    description: "Файлы дампов аварийного завершения приложений и системных ошибок. Нужны только разработчикам для отладки падений."
+    paths:
+      - "%LOCALAPPDATA%\\CrashDumps"
+      - "%PROGRAMDATA%\\Microsoft\\Windows\\WER\\ReportArchive"
+      - "%PROGRAMDATA%\\Microsoft\\Windows\\WER\\ReportQueue"
+      - "%WINDIR%\\Minidump"
+      - "%WINDIR%\\MEMORY.DMP"
+
+  - id: "delivery_optimization"
+    name: "Кэш оптимизации доставки обновлений Windows"
+    category: "system_junk"
+    risk_level: "safe"
+    safety_label: "Безопасно: кэшированные файлы обновлений P2P"
+    description: "Кэш службы Delivery Optimization, используемый для раздачи обновлений Windows в локальной сети."
+    paths:
+      - "%WINDIR%\\SoftwareDistribution\\DeliveryOptimization"
+
+  - id: "windows_downloaded_installers"
+    name: "Загруженные файлы обновлений Windows Update"
+    category: "system_junk"
+    risk_level: "safe"
+    safety_label: "Безопасно: скачанные и уже установленные обновления"
+    description: "Кэш загруженных пакетов Центра обновлений Windows (SoftwareDistribution\\Download)."
+    paths:
+      - "%WINDIR%\\SoftwareDistribution\\Download"
+    options:
+      delete_contents_only: true
+
+  - id: "windows_thumbnail_cache"
+    name: "Кэш миниатюр проводника (Thumbnails)"
+    category: "system_junk"
+    risk_level: "safe"
+    safety_label: "Безопасно: эскизы картинок и видео, проводник пересоздаст их при открытии"
+    description: "Кэш превью картинок и видео (thumbcache_*.db). Очистка помогает, если проводник тормозит или показывает битые эскизы."
+    paths:
+      - "%LOCALAPPDATA%\\Microsoft\\Windows\\Explorer\\thumbcache_*.db"
+      - "%LOCALAPPDATA%\\Microsoft\\Windows\\Explorer\\iconcache_*.db"
+
+  - id: "windows_font_cache"
+    name: "Кэш шрифтов Windows"
+    category: "system_junk"
+    risk_level: "safe"
+    safety_label: "Безопасно: кэш отрисовки шрифтов"
+    description: "Кэш рендеринга шрифтов подсистемы Windows Presentation Foundation и DirectWrite."
+    paths:
+      - "%WINDIR%\\ServiceProfiles\\LocalService\\AppData\\Local\\FontCache"
+      - "%LOCALAPPDATA%\\FontCache"
+
+  - id: "windows_old_installations"
+    name: "Предыдущие установки Windows (Windows.old / $WINDOWS.~BT)"
+    category: "system_junk"
+    risk_level: "medium"
+    safety_label: "Внимание: файлы старой версии Windows для отката системы (удалять, если всё работает стабильно)"
+    description: "Резервные копии предыдущей сборки Windows после крупных обновлений. Занимают 15-40 ГБ."
+    paths:
+      - "%SystemDrive%\\Windows.old"
+      - "%SystemDrive%\\$WINDOWS.~BT"
+      - "%SystemDrive%\\$WINDOWS.~WS"
+      - "%SystemDrive%\\$WinREAgent"

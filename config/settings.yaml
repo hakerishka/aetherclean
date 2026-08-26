@@ -1,0 +1,29 @@
+# AetherClean Settings
+general:
+  target_drive: "C:"
+  quarantine_dir: "C:\\AetherClean_Quarantine"
+  default_action: "recycle_bin" # options: "recycle_bin", "quarantine", "permanent_delete"
+  create_restore_point: true
+  auto_select_safe_only: true
+  theme: "dark"
+
+heuristics:
+  # Minimum file/folder age in days without modification to be considered dormant/orphan
+  orphaned_appdata_min_days: 30
+  dormant_large_file_min_days: 90
+  dormant_large_file_min_size_mb: 500
+  log_files_min_days: 14
+
+exclusions:
+  # Critical directories and files that should NEVER be touched or scanned for deletion
+  whitelist_paths:
+    - "C:\\Windows\\System32"
+    - "C:\\Windows\\SysWOW64"
+    - "C:\\Windows\\WinSxS"
+    - "C:\\Windows\\Boot"
+    - "C:\\Windows\\Fonts"
+    - "C:\\Program Files\\Windows Defender"
+    - "C:\\ProgramData\\Microsoft\\Windows Defender"
+  whitelist_publishers:
+    - "Microsoft Corporation"
+    - "Microsoft Windows"

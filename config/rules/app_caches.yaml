@@ -1,0 +1,141 @@
+# Declarative Application Cache Rules for AetherClean
+version: "1.0"
+rules:
+  # --- Browsers ---
+  - id: "google_chrome_cache"
+    name: "Google Chrome Cache"
+    category: "app_cache"
+    risk_level: "safe"
+    safety_label: "Безопасно: временный кэш страниц и медиа, пересоздаётся автоматически"
+    description: "Кэш страниц, картинок и медиафайлов браузера Google Chrome."
+    paths:
+      - "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\Default\\Cache"
+      - "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\Default\\Code Cache"
+      - "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\Default\\GPUCache"
+      - "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\ShaderCache"
+
+  - id: "ms_edge_cache"
+    name: "Microsoft Edge Cache"
+    category: "app_cache"
+    risk_level: "safe"
+    safety_label: "Безопасно: временный кэш веб-страниц, очистка освобождает место"
+    description: "Кэш браузера Microsoft Edge (картинки, скрипты, шейдеры GPU)."
+    paths:
+      - "%LOCALAPPDATA%\\Microsoft\\Edge\\User Data\\Default\\Cache"
+      - "%LOCALAPPDATA%\\Microsoft\\Edge\\User Data\\Default\\Code Cache"
+      - "%LOCALAPPDATA%\\Microsoft\\Edge\\User Data\\Default\\GPUCache"
+      - "%LOCALAPPDATA%\\Microsoft\\Edge\\User Data\\ShaderCache"
+
+  - id: "mozilla_firefox_cache"
+    name: "Mozilla Firefox Cache"
+    category: "app_cache"
+    risk_level: "safe"
+    safety_label: "Безопасно: дисковый кэш Firefox"
+    description: "Временные файлы и дисковый кэш веб-страниц Mozilla Firefox."
+    paths:
+      - "%LOCALAPPDATA%\\Mozilla\\Firefox\\Profiles\\*\\cache2"
+      - "%LOCALAPPDATA%\\Mozilla\\Firefox\\Profiles\\*\\startupCache"
+
+  - id: "yandex_browser_cache"
+    name: "Yandex Browser Cache"
+    category: "app_cache"
+    risk_level: "safe"
+    safety_label: "Безопасно: временный кэш Яндекс.Браузера"
+    description: "Кэш страниц и графики Яндекс.Браузера."
+    paths:
+      - "%LOCALAPPDATA%\\Yandex\\YandexBrowser\\User Data\\Default\\Cache"
+      - "%LOCALAPPDATA%\\Yandex\\YandexBrowser\\User Data\\Default\\Code Cache"
+      - "%LOCALAPPDATA%\\Yandex\\YandexBrowser\\User Data\\Default\\GPUCache"
+
+  # --- Messengers & Communication ---
+  - id: "telegram_cache"
+    name: "Telegram Desktop Cache"
+    category: "app_cache"
+    risk_level: "safe"
+    safety_label: "Безопасно: кэш фото/видео/документов, все файлы остаются в облаке Telegram"
+    description: "Локально сохраненные медиафайлы, стикеры и аватары. Они автоматически подгрузятся из облака при открытии диалогов."
+    paths:
+      - "%APPDATA%\\Telegram Desktop\\tdata\\user_data\\media_cache"
+      - "%APPDATA%\\Telegram Desktop\\tdata\\user_data\\cache"
+      - "%APPDATA%\\Telegram Desktop\\tdata\\dumps"
+
+  - id: "discord_cache"
+    name: "Discord Cache"
+    category: "app_cache"
+    risk_level: "safe"
+    safety_label: "Безопасно: кэш картинок и видео в Discord"
+    description: "Кэш сообщений, вложений, картинок и GPU-ускорения Discord."
+    paths:
+      - "%APPDATA%\\discord\\Cache"
+      - "%APPDATA%\\discord\\Code Cache"
+      - "%APPDATA%\\discord\\GPUCache"
+
+  - id: "slack_cache"
+    name: "Slack Cache"
+    category: "app_cache"
+    risk_level: "safe"
+    safety_label: "Безопасно: временный кэш Slack"
+    description: "Кэш картинок, превью и Electron-компонентов Slack."
+    paths:
+      - "%APPDATA%\\Slack\\Cache"
+      - "%APPDATA%\\Slack\\Code Cache"
+      - "%APPDATA%\\Slack\\GPUCache"
+
+  - id: "ms_teams_cache"
+    name: "Microsoft Teams Cache"
+    category: "app_cache"
+    risk_level: "safe"
+    safety_label: "Безопасно: кэш встреч и вложений Teams"
+    description: "Временные файлы и кэш Microsoft Teams."
+    paths:
+      - "%APPDATA%\\Microsoft\\Teams\\Cache"
+      - "%APPDATA%\\Microsoft\\Teams\\blob_storage"
+      - "%APPDATA%\\Microsoft\\Teams\\GPUcache"
+      - "%LOCALAPPDATA%\\Packages\\MSTeams_*\\LocalCache"
+
+  # --- Media & Streaming ---
+  - id: "spotify_cache"
+    name: "Spotify Offline Cache"
+    category: "app_cache"
+    risk_level: "safe"
+    safety_label: "Безопасно: кэш потоковой музыки Spotify"
+    description: "Локально сохраненные треки и кэш обложек альбомов Spotify."
+    paths:
+      - "%LOCALAPPDATA%\\Spotify\\Data"
+      - "%LOCALAPPDATA%\\Spotify\\Storage"
+
+  # --- Gaming Platforms & Shader Caches ---
+  - id: "steam_shader_cache"
+    name: "Steam & DirectX/Vulkan Shader Caches"
+    category: "app_cache"
+    risk_level: "safe"
+    safety_label: "Безопасно: скомпилированные шейдеры игр, пересоздаются при необходимости"
+    description: "Кэш шейдеров видеокарт DirectX, NVIDIA, AMD и Steam для ускорения рендеринга."
+    paths:
+      - "%LOCALAPPDATA%\\D3DSCache"
+      - "%LOCALAPPDATA%\\NVIDIA\\GLCache"
+      - "%LOCALAPPDATA%\\NVIDIA\\DXCache"
+      - "%LOCALAPPDATA%\\AMD\\DxCache"
+      - "%LOCALAPPDATA%\\AMD\\GLCache"
+
+  - id: "epic_games_launcher_cache"
+    name: "Epic Games Launcher Cache"
+    category: "app_cache"
+    risk_level: "safe"
+    safety_label: "Безопасно: веб-кэш лаунчера Epic Games"
+    description: "Временные веб-страницы и кэш лаунчера Epic Games."
+    paths:
+      - "%LOCALAPPDATA%\\EpicGamesLauncher\\Saved\\webcache"
+      - "%LOCALAPPDATA%\\EpicGamesLauncher\\Saved\\Logs"
+
+  # --- Office & Design Tools ---
+  - id: "adobe_common_cache"
+    name: "Adobe Media & Peak Cache"
+    category: "app_cache"
+    risk_level: "safe"
+    safety_label: "Безопасно: пиковые файлы и кэш медиа Adobe"
+    description: "Временные медиакэши программ Adobe Premiere, After Effects, Photoshop."
+    paths:
+      - "%APPDATA%\\Adobe\\Common\\Media Cache Files"
+      - "%APPDATA%\\Adobe\\Common\\Peak Files"
+      - "%LOCALAPPDATA%\\Adobe\\CameraRaw\\Cache"

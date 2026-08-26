@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aetherclean"
+version = "1.0.0"
+description = "Intelligent storage, orphaned AppData and system debris analyzer for Windows 11 & 10."
+readme = "README.md"
+authors = [{ name = "AetherClean Contributors" }]
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+keywords = ["windows", "cleaner", "disk-analyzer", "appdata", "pyside6", "storage", "debris-cleaner", "windows11"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Win32 (MS Windows)",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows :: Windows 10",
+    "Operating System :: Microsoft :: Windows :: Windows 11",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "PySide6>=6.6.0",
+    "psutil>=5.9.0",
+    "pyyaml>=6.0",
+    "send2trash>=1.8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[project.scripts]
+aetherclean = "main:main"
+
+[project.urls]
+Homepage = "https://github.com/aetherclean/aetherclean"
+Documentation = "https://github.com/aetherclean/aetherclean/blob/main/DOCUMENTATION.md"
+"Bug Tracker" = "https://github.com/aetherclean/aetherclean/issues"
+"AI Skills" = "https://github.com/aetherclean/aetherclean/blob/main/AI_SKILL.md"

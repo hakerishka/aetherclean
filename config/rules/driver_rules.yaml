@@ -1,0 +1,33 @@
+# Declarative Driver Package Rules for AetherClean
+version: "1.0"
+rules:
+  - id: "nvidia_installer_cache"
+    name: "Распакованные дистрибутивы драйверов NVIDIA"
+    category: "drivers"
+    risk_level: "safe"
+    safety_label: "Безопасно: временные файлы установки драйвера NVIDIA, сам драйвер уже работает в системе"
+    description: "Папки с распакованными файлами инсталлятора NVIDIA (C:\\NVIDIA, NetService, Logging)."
+    paths:
+      - "%SystemDrive%\\NVIDIA"
+      - "%PROGRAMDATA%\\NVIDIA Corporation\\Downloader"
+      - "%PROGRAMDATA%\\NVIDIA Corporation\\NetService"
+      - "%LOCALAPPDATA%\\NVIDIA\\NvBackend\\Packages"
+
+  - id: "amd_installer_cache"
+    name: "Распакованные дистрибутивы драйверов AMD"
+    category: "drivers"
+    risk_level: "safe"
+    safety_label: "Безопасно: временные установочные архивы драйверов AMD"
+    description: "Папки распаковки драйверов AMD Radeon (C:\\AMD)."
+    paths:
+      - "%SystemDrive%\\AMD"
+      - "%LOCALAPPDATA%\\AMD\\RadeonSoftware\\Packages"
+
+  - id: "intel_installer_cache"
+    name: "Распакованные дистрибутивы драйверов Intel"
+    category: "drivers"
+    risk_level: "safe"
+    safety_label: "Безопасно: временные пакеты установки драйверов Intel"
+    description: "Временные установочные файлы графики и чипсетов Intel (C:\\Intel)."
+    paths:
+      - "%SystemDrive%\\Intel"
