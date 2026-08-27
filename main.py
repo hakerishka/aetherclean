@@ -1,5 +1,5 @@
 """
-AetherClean — Intelligent Disk Analyzer & Safe Cleaner for Windows 11.
+AetherClean — Intelligent Storage & Debris Analyzer for Windows 11.
 Main Entry Point.
 """
 
@@ -11,9 +11,29 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
+# Graceful dependency check for direct CLI invocations
+try:
+    from PySide6.QtWidgets import QApplication
+    from PySide6.QtCore import Qt
+    from PySide6.QtGui import QFont
+    import psutil
+    import yaml
+    import send2trash
+except ImportError as e:
+    print("=" * 65)
+    print(" [AetherClean] Missing required libraries!")
+    print(f" Details: {e}")
+    print("\n To automatically install dependencies, simply run:")
+    print("     run.bat")
+    print(" Or manually via terminal:")
+    print("     pip install -r requirements.txt")
+    print("=" * 65)
+    try:
+        input("\nPress Enter to exit...")
+    except Exception:
+        pass
+    sys.exit(1)
+
 from ui.main_window import MainWindow
 
 
