@@ -83,14 +83,16 @@ class CleanWorker(QThread):
             self.error_signal.emit(str(e))
 
 
+from core.path_utils import get_config_path
+
+
 class MainWindow(QMainWindow):
     """Main Application Window for AetherClean."""
 
     def __init__(self):
         super().__init__()
         # Paths
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.settings_path = os.path.join(base_dir, "config", "settings.yaml")
+        self.settings_path = get_config_path(os.path.join("config", "settings.yaml"))
         self.settings = self._load_settings()
 
         # Set configured language

@@ -1,14 +1,14 @@
 """
-Driver Store and Unpacked Drivers Scanner.
+Driver Store and Unpacked Drivers Scanner for AetherClean.
 Identifies redundant driver installation files and old OEM driver packages.
 """
 
 import os
-import subprocess
-from datetime import datetime
+import yaml
 from typing import List, Optional, Callable
 from core.models import ScanItem, FileEntry, RiskLevel, Category
 from core.rule_engine import RuleEngine
+from core.path_utils import get_config_path
 from .base_scanner import BaseScanner
 
 
@@ -19,15 +19,13 @@ class DriverStoreScanner(BaseScanner):
         items: List[ScanItem] = []
 
         if progress_callback:
-            progress_callback("Поиск распакованных дистрибутивов драйверов (NVIDIA / AMD / Intel)...", 20)
+            progress_callback("Scanning unpacked driver setup packages...", 20)
 
         # Load driver declarative rules
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        driver_rules_path = os.path.join(base_dir, "config", "rules", "driver_rules.yaml")
+        driver_rules_path = get_config_path(os.path.join("config", "rules", "driver_rules.yaml"))
 
         rule_engine = RuleEngine()
         if os.path.exists(driver_rules_path):
-            import yaml
             try:
                 with open(driver_rules_path, "r", encoding="utf-8") as f:
                     data = yaml.safe_load(f)
@@ -44,7 +42,7 @@ class DriverStoreScanner(BaseScanner):
 
         # Check DriverStore FileRepository summary
         if progress_callback:
-            progress_callback("Анализ хранилища драйверов Windows (DriverStore)...", 60)
+            progress_callback("Analyzing Windows DriverStore repository...", 60)
 
         ds_path = os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "System32", "DriverStore", "FileRepository")
         if os.path.isdir(ds_path):
@@ -53,12 +51,12 @@ class DriverStoreScanner(BaseScanner):
                 items.append(
                     ScanItem(
                         id="driverstore_filerepository_info",
-                        title="Хранилище пакетов драйверов (DriverStore)",
+                        title="Windows DriverStore Repository",
                         category=Category.DRIVERS,
                         risk_level=RiskLevel.HIGH,
-                        safety_label="Высокий риск: системные драйверы. Очистка только через специализированный инструмент",
-                        description=f"Папка FileRepository занимает {ds_size / (1024**3):.2f} ГБ. Windows хранит в ней резервные копии всех когда-либо установленных версий драйверов.",
-                        reason=f"Обнаружено {ds_count} пакетов драйверов. Для безопасного удаления устаревших версий рекомендуется использовать утилиту pnputil или DriverStore Explorer.",
+                        safety_label="High risk: active system drivers. Safe removal requires pnputil",
+                        description=f"FileRepository folder takes {ds_size / (1024**3):.2f} GB. Windows stores backup copies of all installed driver versions.",
+                        reason=f"Found {ds_count} driver packages. Obsolete versions can be safely cleaned using pnputil or DriverStore Explorer.",
                         total_size=ds_size,
                         file_count=ds_count,
                         paths=[ds_path],
