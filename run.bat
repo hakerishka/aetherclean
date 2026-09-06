@@ -23,7 +23,7 @@ if %errorlevel% neq 0 (
 :: 2. Check if required libraries are installed
 python -c "import PySide6, psutil, yaml, send2trash" >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [SETUP] Required libraries (PySide6, psutil, pyyaml, send2trash) are missing.
+    echo [SETUP] Required libraries [PySide6, psutil, pyyaml, send2trash] are missing.
     echo [SETUP] Installing dependencies automatically... Please wait.
     echo.
     python -m pip install -r "%~dp0requirements.txt"
